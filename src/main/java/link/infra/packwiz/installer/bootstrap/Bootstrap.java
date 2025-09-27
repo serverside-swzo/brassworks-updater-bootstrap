@@ -28,56 +28,78 @@ public class Bootstrap {
 	private static String jarPath = null;
 	private static String accessToken = null;
 
-	public static void init(String[] args) {
-		try {
-			parseOptions(args);
-		} catch (ParseException e) {
-			showError(e, "There was an error parsing command line arguments:");
-			System.exit(1);
-		}
-		
-		if (jarPath == null) {
-			jarPath = JAR_NAME;
-		}
+    public static void init(String[] args) {
+        try {
+            parseOptions(args);
+        } catch (ParseException e) {
+            showError(e, "There was an error parsing command line arguments:");
+            System.exit(1);
+        }
 
-		if (useGUI) {
-			EventQueue.invokeLater(() -> {
-				try {
-					UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-				} catch (Exception e) {
-					// Ignore the exceptions, just continue using the ugly L&F
-				}
-			});
-		}
+        if (jarPath == null) {
+            jarPath = JAR_NAME;
+        }
 
-		if (skipUpdate) {
-			try {
-				LoadJAR.start(args, jarPath);
-			} catch (ClassNotFoundException e) {
-				showError(e, "brassworks-updater cannot be found, or there was an error loading it:");
-				System.exit(1);
-			} catch (Exception e) {
-				showError(e, "There was an error loading brassworks-updater:");
-				System.exit(1);
-			}
-			return;
-		}
+        if (useGUI) {
+            EventQueue.invokeLater(() -> {
+                try {
+                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                } catch (Exception e) {
+                    // Ignore the exceptions, just continue using the ugly L&F
+                }
 
-		try {
-			doUpdate();
-		} catch (Exception e) {
-			showError(e, "There was an error downloading brassworks-updater:");
-		}
+                // --- Create the main frame (or get your actual JFrame here) ---
+                JFrame mainFrame = new JFrame("brassworks-updater");
 
-		try {
-			LoadJAR.start(args, jarPath);
-		} catch (Exception e) {
-			showError(e, "There was an error loading brassworks-updater (did it download properly?):");
-			System.exit(1);
-		}
-	}
+                // --- Add multiple icon sizes ---
+                List<Image> icons = new ArrayList<>();
+                String[] iconFiles = {"/icon16.png", "/icon32.png", "/icon48.png", "/icon128.png"};
+                for (String iconFile : iconFiles) {
+                    java.net.URL url = Bootstrap.class.getResource(iconFile);
+                    if (url != null) {
+                        icons.add(new ImageIcon(url).getImage());
+                    }
+                }
+                if (!icons.isEmpty()) {
+                    mainFrame.setIconImages(icons);
+                }
 
-	private static void doUpdate() throws IOException, GithubException {
+                // --- Your existing GUI setup ---
+                mainFrame.setSize(600, 400);
+                mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                mainFrame.setVisible(true);
+            });
+        }
+
+        if (skipUpdate) {
+            try {
+                LoadJAR.start(args, jarPath);
+            } catch (ClassNotFoundException e) {
+                showError(e, "brassworks-updater cannot be found, or there was an error loading it:");
+                System.exit(1);
+            } catch (Exception e) {
+                showError(e, "There was an error loading brassworks-updater:");
+                System.exit(1);
+            }
+            return;
+        }
+
+        try {
+            doUpdate();
+        } catch (Exception e) {
+            showError(e, "There was an error downloading brassworks-updater:");
+        }
+
+        try {
+            LoadJAR.start(args, jarPath);
+        } catch (Exception e) {
+            showError(e, "There was an error loading brassworks-updater (did it download properly?):");
+            System.exit(1);
+        }
+    }
+
+
+    private static void doUpdate() throws IOException, GithubException {
 		String currVersion = LoadJAR.getVersion(jarPath);
 		Release ghRelease = requestRelease();
 		
