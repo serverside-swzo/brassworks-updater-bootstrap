@@ -13,14 +13,14 @@ public class ChainloadHandler {
 	private ChainloadHandler() {} // Who needs OOP anyway?
 
 	public static void startChainloadClass(String chainloadClass, List<String> bootstrapArgs, String[] args) {
-		System.out.println("[packwiz-installer-bootstrap] Invoking self (chainload class " + chainloadClass + ")");
+		System.out.println("[brassworks-updater-bootstrap] Invoking self (chainload class " + chainloadClass + ")");
 
 		runSubprocessSelf(bootstrapArgs);
 		runChainloadClass(Arrays.asList(args), chainloadClass);
 	}
 
 	public static void startChainloadJar(String chainloadJar, List<String> bootstrapArgs, String[] args) {
-		System.out.println("[packwiz-installer-bootstrap] Invoking self (chainload jar " + chainloadJar + ")");
+		System.out.println("[brassworks-updater-bootstrap] Invoking self (chainload jar " + chainloadJar + ")");
 
 		// TODO: check chainload path validity? (shouldn't allow traversal)
 		// TODO: threat model for this file??
@@ -44,7 +44,7 @@ public class ChainloadHandler {
 				System.exit(res);
 			}
 		} catch (InterruptedException | IOException e) {
-			throw new RuntimeException("packwiz-installer-bootstrap failed to run subprocess: ", e);
+			throw new RuntimeException("brassworks-updater-bootstrap failed to run subprocess: ", e);
 		}
 	}
 
@@ -54,7 +54,7 @@ public class ChainloadHandler {
 		try {
 			jarPath = Paths.get(ChainloadHandler.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();
 		} catch (URISyntaxException e) {
-			throw new RuntimeException("packwiz-installer-bootstrap failed to run self subprocess: ", e);
+			throw new RuntimeException("brassworks-updater-bootstrap failed to run self subprocess: ", e);
 		}
 		runSubprocess(args, jarPath);
 	}
@@ -64,14 +64,14 @@ public class ChainloadHandler {
 		try {
 			mainClass = ChainloadHandler.class.getClassLoader().loadClass(mainClassName);
 		} catch (ClassNotFoundException e) {
-			throw new RuntimeException("packwiz-installer-bootstrap failed chainload: ", e);
+			throw new RuntimeException("brassworks-updater-bootstrap failed chainload: ", e);
 		}
 		if (mainClass != null) {
 			try {
 				Method main = mainClass.getMethod("main", String[].class);
 				main.invoke(null, new Object[] {args.toArray(new String[0])});
 			} catch (NoSuchMethodException | IllegalAccessException e) {
-				throw new RuntimeException("packwiz-installer-bootstrap failed chainload: ", e);
+				throw new RuntimeException("brassworks-updater-bootstrap failed chainload: ", e);
 			} catch (InvocationTargetException e) {
 				throw new RuntimeException(e.getTargetException());
 			}

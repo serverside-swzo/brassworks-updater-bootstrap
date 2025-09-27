@@ -21,19 +21,19 @@ public class Main {
 		// Check for chainload in Java System Properties
 		if (attemptChainload(System.getProperties(), args)) { return; }
 
-		// Try looking in packwiz-installer-bootstrap.properties
-		try (FileReader reader = new FileReader("packwiz-installer-bootstrap.properties")) {
+		// Try looking in brassworks-updater-bootstrap.properties
+		try (FileReader reader = new FileReader("brassworks-updater-bootstrap.properties")) {
 			Properties props = new Properties();
 			props.load(reader);
 			if (attemptChainload(props, args)) {
 				return;
 			} else {
-				throw new RuntimeException("packwiz-installer-bootstrap.properties is invalid");
+				throw new RuntimeException("brassworks-updater-bootstrap.properties is invalid");
 			}
 		} catch (FileNotFoundException ignored) {
 			// Ignored - continue trying to start without chainloading
 		} catch (IOException e) {
-			throw new RuntimeException("Failed to read packwiz-installer-bootstrap.properties", e);
+			throw new RuntimeException("Failed to read brassworks-updater-bootstrap.properties", e);
 		}
 
 		Bootstrap.init(args);

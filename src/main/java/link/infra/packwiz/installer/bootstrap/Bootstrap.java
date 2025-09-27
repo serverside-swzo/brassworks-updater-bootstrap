@@ -19,8 +19,8 @@ import java.util.List;
 
 public class Bootstrap {
 
-	private static final String DEFAULT_UPDATE_URL = "https://api.github.com/repos/comp500/packwiz-installer/releases/latest";
-	public static final String JAR_NAME = "packwiz-installer.jar";
+	private static final String DEFAULT_UPDATE_URL = "https://api.github.com/repos/serverside-swzo/packwiz-installer/releases/latest";
+	public static final String JAR_NAME = "brassworks-updater.jar";
 
 	private static String updateURL = DEFAULT_UPDATE_URL;
 	private static boolean skipUpdate = false;
@@ -54,10 +54,10 @@ public class Bootstrap {
 			try {
 				LoadJAR.start(args, jarPath);
 			} catch (ClassNotFoundException e) {
-				showError(e, "packwiz-installer cannot be found, or there was an error loading it:");
+				showError(e, "brassworks-updater cannot be found, or there was an error loading it:");
 				System.exit(1);
 			} catch (Exception e) {
-				showError(e, "There was an error loading packwiz-installer:");
+				showError(e, "There was an error loading brassworks-updater:");
 				System.exit(1);
 			}
 			return;
@@ -66,13 +66,13 @@ public class Bootstrap {
 		try {
 			doUpdate();
 		} catch (Exception e) {
-			showError(e, "There was an error downloading packwiz-installer:");
+			showError(e, "There was an error downloading brassworks-updater:");
 		}
 
 		try {
 			LoadJAR.start(args, jarPath);
 		} catch (Exception e) {
-			showError(e, "There was an error loading packwiz-installer (did it download properly?):");
+			showError(e, "There was an error loading brassworks-updater (did it download properly?):");
 			System.exit(1);
 		}
 	}
@@ -123,7 +123,7 @@ public class Bootstrap {
 			try {
 				EventQueue.invokeAndWait(() -> JOptionPane.showMessageDialog(null,
 					message + "\n" + e.getClass().getCanonicalName() + ": " + e.getMessage(),
-					"packwiz-installer-bootstrap", JOptionPane.ERROR_MESSAGE));
+					"brassworks-updater-bootstrap", JOptionPane.ERROR_MESSAGE));
 			} catch (InterruptedException | InvocationTargetException ex) {
 				System.out.println("Unexpected interruption while showing error message");
 				ex.printStackTrace();
@@ -138,8 +138,8 @@ public class Bootstrap {
 		Options options = new Options();
 		options.addOption(null, "bootstrap-update-url", true, "Github API URL for checking for updates");
 		options.addOption(null, "bootstrap-update-token", true, "Github API Access Token, for private repositories");
-		options.addOption(null, "bootstrap-no-update", false, "Don't update packwiz-installer");
-		options.addOption(null, "bootstrap-main-jar", true, "Location of the packwiz-installer JAR file");
+		options.addOption(null, "bootstrap-no-update", false, "Don't update brassworks-updater");
+		options.addOption(null, "bootstrap-main-jar", true, "Location of the brassworks-updater JAR file");
 		options.addOption("g", "no-gui", false, "Don't display a GUI to show update progress");
 		options.addOption("h", "help", false, "Display this message");
 
@@ -152,11 +152,11 @@ public class Bootstrap {
 
 		if (cmd.hasOption("help")) {
 			HelpFormatter formatter = new HelpFormatter();
-			// Add options from packwiz-installer JAR, if it is present
+			// Add options from brassworks-updater JAR, if it is present
 			boolean jarLoaded = LoadJAR.addOptions(options, jarPath);
-			formatter.printHelp("java -jar packwiz-installer-bootstrap.jar", options);
+			formatter.printHelp("java -jar brassworks-updater-bootstrap.jar", options);
 			if (!jarLoaded) {
-				System.out.println("Options for packwiz-installer will be visible once it has been downloaded.");
+				System.out.println("Options for brassworks-updater will be visible once it has been downloaded.");
 			}
 			System.exit(0);
 		}
@@ -179,7 +179,7 @@ public class Bootstrap {
 	}
 
 	// Remove invalid arguments, because Commons CLI chokes on invalid arguments
-	// (that should be passed to packwiz-installer)
+	// (that should be passed to brassworks-updater)
 	private static String[] filterArgs(String[] args, Options options) {
 		List<String> argsList = new ArrayList<>(args.length);
 		boolean prevOptWasArg = false;
@@ -230,7 +230,7 @@ public class Bootstrap {
 		conn.setReadTimeout(30 * 1000);
 		InputStream in;
 		if (useGUI) {
-			in = new ConnMonitorInputStream(conn, "Checking for packwiz-installer updates...", null);
+			in = new ConnMonitorInputStream(conn, "Checking for brassworks-updater updates...", null);
 		} else {
 			in = conn.getInputStream();
 		}
@@ -295,7 +295,7 @@ public class Bootstrap {
 		conn.setReadTimeout(30 * 1000);
 		InputStream in;
 		if (useGUI) {
-			in = new ConnMonitorInputStream(conn, "Updating packwiz-installer...", null);
+			in = new ConnMonitorInputStream(conn, "Updating brassworks-updater...", null);
 		} else {
 			in = conn.getInputStream();
 		}
