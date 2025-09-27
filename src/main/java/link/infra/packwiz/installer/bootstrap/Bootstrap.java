@@ -19,14 +19,15 @@ import java.util.List;
 
 public class Bootstrap {
 
-	private static final String DEFAULT_UPDATE_URL = "https://api.github.com/repos/serverside-swzo/packwiz-installer/releases/latest";
-	public static final String JAR_NAME = "brassworks-updater.jar";
+    private static final String DEFAULT_UPDATE_URL = "https://api.github.com/repos/serverside-swzo/packwiz-installer/releases/latest";
+    public static final String JAR_NAME = "brassworks-updater.jar";
 
-	private static String updateURL = DEFAULT_UPDATE_URL;
-	private static boolean skipUpdate = false;
-	private static boolean useGUI = true;
-	private static String jarPath = null;
-	private static String accessToken = null;
+    private static String updateURL = DEFAULT_UPDATE_URL;
+    private static boolean skipUpdate = false;
+    private static boolean useGUI = true;
+    private static String jarPath = null;
+    private static String accessToken = null;
+    private static final List<Image> icons = new ArrayList<>();
 
     public static void init(String[] args) {
         try {
@@ -41,33 +42,20 @@ public class Bootstrap {
         }
 
         if (useGUI) {
+            final String[] iconPaths = {"/icon16.png", "/icon32.png", "/icon48.png", "/icon128.png"};
+            for (String path : iconPaths) {
+                URL iconURL = Bootstrap.class.getResource(path);
+                if (iconURL != null) {
+                    icons.add(new ImageIcon(iconURL).getImage());
+                }
+            }
+
             EventQueue.invokeLater(() -> {
                 try {
                     UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
                 } catch (Exception e) {
                     // Ignore the exceptions, just continue using the ugly L&F
                 }
-
-                // --- Create the main frame (or get your actual JFrame here) ---
-                JFrame mainFrame = new JFrame("brassworks-updater");
-
-                // --- Add multiple icon sizes ---
-                List<Image> icons = new ArrayList<>();
-                String[] iconFiles = {"/icon16.png", "/icon32.png", "/icon48.png", "/icon128.png"};
-                for (String iconFile : iconFiles) {
-                    java.net.URL url = Bootstrap.class.getResource(iconFile);
-                    if (url != null) {
-                        icons.add(new ImageIcon(url).getImage());
-                    }
-                }
-                if (!icons.isEmpty()) {
-                    mainFrame.setIconImages(icons);
-                }
-
-                // --- Your existing GUI setup ---
-                mainFrame.setSize(600, 400);
-                mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                mainFrame.setVisible(true);
             });
         }
 
@@ -98,238 +86,282 @@ public class Bootstrap {
         }
     }
 
-
     private static void doUpdate() throws IOException, GithubException {
-		String currVersion = LoadJAR.getVersion(jarPath);
-		Release ghRelease = requestRelease();
-		
-		if (ghRelease == null) {
-			return;
-		}
+        String currVersion = LoadJAR.getVersion(jarPath);
+        Release ghRelease = requestRelease();
 
-		System.out.println("Current version is: " + currVersion);
-		System.out.println("New version is: " + ghRelease.tagName);
-		if (!ghRelease.tagName.equals(currVersion)) {
-			System.out.println("Attempting to update...");
-			RollbackHandler backup = new RollbackHandler(jarPath);
+        if (ghRelease == null) {
+            return;
+        }
 
-			try {
-				downloadUpdate(ghRelease.downloadURL, ghRelease.assetURL, jarPath);
-			} catch (InterruptedIOException e) {
-				// User did this, don't show the error
-				try {
-					backup.rollback();
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
-				return;
-			} catch (IOException e) {
-				showError(e, "Update download failed, attempting to rollback:");
-				try {
-					backup.rollback();
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
-				return;
-			}
+        System.out.println("Current version is: " + currVersion);
+        System.out.println("New version is: " + ghRelease.tagName);
+        if (!ghRelease.tagName.equals(currVersion)) {
+            System.out.println("Attempting to update...");
+            RollbackHandler backup = new RollbackHandler(jarPath);
 
-			System.out.println("Update successful!");
-		} else {
-			System.out.println("Already up to date!");
-		}
-	}
+            try {
+                downloadUpdate(ghRelease.downloadURL, ghRelease.assetURL, jarPath);
+            } catch (InterruptedIOException e) {
+                // User did this, don't show the error
+                try {
+                    backup.rollback();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+                return;
+            } catch (IOException e) {
+                showError(e, "Update download failed, attempting to rollback:");
+                try {
+                    backup.rollback();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+                return;
+            }
 
-	private static void showError(Exception e, String message) {
-		if (useGUI) {
-			e.printStackTrace();
-			try {
-				EventQueue.invokeAndWait(() -> JOptionPane.showMessageDialog(null,
-					message + "\n" + e.getClass().getCanonicalName() + ": " + e.getMessage(),
-					"brassworks-updater-bootstrap", JOptionPane.ERROR_MESSAGE));
-			} catch (InterruptedException | InvocationTargetException ex) {
-				System.out.println("Unexpected interruption while showing error message");
-				ex.printStackTrace();
-			}
-		} else {
-			System.out.println(message);
-			e.printStackTrace();
-		}
-	}
+            System.out.println("Update successful!");
+        } else {
+            System.out.println("Already up to date!");
+        }
+    }
 
-	private static void parseOptions(String[] args) throws ParseException {
-		Options options = new Options();
-		options.addOption(null, "bootstrap-update-url", true, "Github API URL for checking for updates");
-		options.addOption(null, "bootstrap-update-token", true, "Github API Access Token, for private repositories");
-		options.addOption(null, "bootstrap-no-update", false, "Don't update brassworks-updater");
-		options.addOption(null, "bootstrap-main-jar", true, "Location of the brassworks-updater JAR file");
-		options.addOption("g", "no-gui", false, "Don't display a GUI to show update progress");
-		options.addOption("h", "help", false, "Display this message");
+    private static void showError(Exception e, String message) {
+        if (useGUI) {
+            e.printStackTrace();
+            try {
+                EventQueue.invokeAndWait(() -> {
+                    JFrame owner = new JFrame();
+                    if (!icons.isEmpty()) {
+                        owner.setIconImages(icons);
+                    }
+                    owner.setUndecorated(true);
+                    owner.setVisible(true);
+                    owner.setLocationRelativeTo(null);
+                    JOptionPane.showMessageDialog(owner,
+                            message + "\n" + e.getClass().getCanonicalName() + ": " + e.getMessage(),
+                            "brassworks-updater-bootstrap", JOptionPane.ERROR_MESSAGE);
+                    owner.dispose();
+                });
+            } catch (InterruptedException | InvocationTargetException ex) {
+                System.out.println("Unexpected interruption while showing error message");
+                ex.printStackTrace();
+            }
+        } else {
+            System.out.println(message);
+            e.printStackTrace();
+        }
+    }
 
-		CommandLineParser parser = new DefaultParser();
-		CommandLine cmd = parser.parse(options, filterArgs(args, options));
+    private static void parseOptions(String[] args) throws ParseException {
+        Options options = new Options();
+        options.addOption(null, "bootstrap-update-url", true, "Github API URL for checking for updates");
+        options.addOption(null, "bootstrap-update-token", true, "Github API Access Token, for private repositories");
+        options.addOption(null, "bootstrap-no-update", false, "Don't update brassworks-updater");
+        options.addOption(null, "bootstrap-main-jar", true, "Location of the brassworks-updater JAR file");
+        options.addOption("g", "no-gui", false, "Don't display a GUI to show update progress");
+        options.addOption("h", "help", false, "Display this message");
 
-		if (cmd.hasOption("bootstrap-main-jar")) {
-			jarPath = cmd.getOptionValue("bootstrap-main-jar");
-		}
+        CommandLineParser parser = new DefaultParser();
+        CommandLine cmd = parser.parse(options, filterArgs(args, options));
 
-		if (cmd.hasOption("help")) {
-			HelpFormatter formatter = new HelpFormatter();
-			// Add options from brassworks-updater JAR, if it is present
-			boolean jarLoaded = LoadJAR.addOptions(options, jarPath);
-			formatter.printHelp("java -jar brassworks-updater-bootstrap.jar", options);
-			if (!jarLoaded) {
-				System.out.println("Options for brassworks-updater will be visible once it has been downloaded.");
-			}
-			System.exit(0);
-		}
+        if (cmd.hasOption("bootstrap-main-jar")) {
+            jarPath = cmd.getOptionValue("bootstrap-main-jar");
+        }
 
-		if (cmd.hasOption("bootstrap-update-url")) {
-			updateURL = cmd.getOptionValue("bootstrap-update-url");
-		}
-		
-		if (cmd.hasOption("bootstrap-update-token")) {
-			accessToken = cmd.getOptionValue("bootstrap-update-token");
-		}
+        if (cmd.hasOption("help")) {
+            HelpFormatter formatter = new HelpFormatter();
+            // Add options from brassworks-updater JAR, if it is present
+            boolean jarLoaded = LoadJAR.addOptions(options, jarPath);
+            formatter.printHelp("java -jar brassworks-updater-bootstrap.jar", options);
+            if (!jarLoaded) {
+                System.out.println("Options for brassworks-updater will be visible once it has been downloaded.");
+            }
+            System.exit(0);
+        }
 
-		if (cmd.hasOption("bootstrap-no-update")) {
-			skipUpdate = true;
-		}
+        if (cmd.hasOption("bootstrap-update-url")) {
+            updateURL = cmd.getOptionValue("bootstrap-update-url");
+        }
 
-		if (cmd.hasOption("no-gui")) {
-			useGUI = false;
-		}
-	}
+        if (cmd.hasOption("bootstrap-update-token")) {
+            accessToken = cmd.getOptionValue("bootstrap-update-token");
+        }
 
-	// Remove invalid arguments, because Commons CLI chokes on invalid arguments
-	// (that should be passed to brassworks-updater)
-	private static String[] filterArgs(String[] args, Options options) {
-		List<String> argsList = new ArrayList<>(args.length);
-		boolean prevOptWasArg = false;
-		for (String arg : args) {
-			if (arg.charAt(0) == '-' && options.hasOption(arg)) {
-				if (options.getOption(arg).hasArg()) {
-					prevOptWasArg = true;
-				}
-			} else {
-				if (prevOptWasArg) {
-					prevOptWasArg = false;
-				} else {
-					continue;
-				}
-			}
-			argsList.add(arg);
-		}
+        if (cmd.hasOption("bootstrap-no-update")) {
+            skipUpdate = true;
+        }
 
-		return argsList.toArray(new String[0]);
-	}
+        if (cmd.hasOption("no-gui")) {
+            useGUI = false;
+        }
+    }
 
-	private static class Release {
-		String tagName = null;
-		String downloadURL = null;
-		String assetURL = null;
-	}
+    // Remove invalid arguments, because Commons CLI chokes on invalid arguments
+    // (that should be passed to brassworks-updater)
+    private static String[] filterArgs(String[] args, Options options) {
+        List<String> argsList = new ArrayList<>(args.length);
+        boolean prevOptWasArg = false;
+        for (String arg : args) {
+            if (arg.charAt(0) == '-' && options.hasOption(arg)) {
+                if (options.getOption(arg).hasArg()) {
+                    prevOptWasArg = true;
+                }
+            } else {
+                if (prevOptWasArg) {
+                    prevOptWasArg = false;
+                } else {
+                    continue;
+                }
+            }
+            argsList.add(arg);
+        }
 
-	private static class GithubException extends Exception {
-		private static final long serialVersionUID = 3843811090801607241L;
+        return argsList.toArray(new String[0]);
+    }
 
-		public GithubException() {
-			super("Invalid Github API response");
-		}
+    private static class Release {
+        String tagName = null;
+        String downloadURL = null;
+        String assetURL = null;
+    }
 
-		public GithubException(String message) {
-			super("Invalid Github API response: " + message);
-		}
-	}
+    private static class GithubException extends Exception {
+        private static final long serialVersionUID = 3843811090801607241L;
 
-	private static Release requestRelease() throws IOException, GithubException {
-		Release rel = new Release();
+        public GithubException() {
+            super("Invalid Github API response");
+        }
 
-		URL url = new URL(updateURL);
-		URLConnection conn = url.openConnection();
+        public GithubException(String message) {
+            super("Invalid Github API response: " + message);
+        }
+    }
 
-		addAuthorizationHeader(conn);
-		// 30 second read timeout
-		conn.setReadTimeout(30 * 1000);
-		InputStream in;
-		if (useGUI) {
-			in = new ConnMonitorInputStream(conn, "Checking for brassworks-updater updates...", null);
-		} else {
-			in = conn.getInputStream();
-		}
-		Reader streamReader = new InputStreamReader(in);
-		JsonObject object;
-		try {
-			object = Json.parse(streamReader).asObject();
-		} catch (InterruptedIOException e) {
-			System.out.println("Update check cancelled!");
-			return null;
-		}
-		streamReader.close();
+    private static Release requestRelease() throws IOException, GithubException {
+        Release rel = new Release();
 
-		rel.tagName = getStringProperty("tag_name", object, "Tag name");
+        URL url = new URL(updateURL);
+        URLConnection conn = url.openConnection();
 
-		JsonValue assets = object.get("assets");
-		if (assets == null || !assets.isArray()) {
-			throw new GithubException("Assets array cannot be found");
-		}
-		for (JsonValue assetValue : assets.asArray()) {
-			if (!assetValue.isObject()) {
-				throw new GithubException();
-			}
+        addAuthorizationHeader(conn);
+        // 30 second read timeout
+        conn.setReadTimeout(30 * 1000);
 
-			JsonObject asset = assetValue.asObject();
-			String name = getStringProperty("name", asset, "Asset name");
+        JFrame owner = null;
+        if (useGUI) {
+            owner = new JFrame();
+            if (!icons.isEmpty()) {
+                owner.setIconImages(icons);
+            }
+            owner.setUndecorated(true);
+            owner.setVisible(true);
+            owner.setLocationRelativeTo(null);
+        }
 
-			if (!name.equalsIgnoreCase(JAR_NAME)) {
-				continue;
-			}
+        try {
+            InputStream in;
+            if (useGUI) {
+                in = new ConnMonitorInputStream(conn, "Checking for brassworks-updater updates...", null, owner);
+            } else {
+                in = conn.getInputStream();
+            }
+            Reader streamReader = new InputStreamReader(in);
+            JsonObject object;
+            try {
+                object = Json.parse(streamReader).asObject();
+            } catch (InterruptedIOException e) {
+                System.out.println("Update check cancelled!");
+                return null;
+            }
+            streamReader.close();
 
-			rel.downloadURL = getAssetUrl("browser_download_url", asset);
-			rel.assetURL = getAssetUrl("url", asset);
-			break;
-		}
-		if (rel.tagName == null) {
-			throw new GithubException("Latest release asset cannot be found");
-		}
+            rel.tagName = getStringProperty("tag_name", object, "Tag name");
 
-		return rel;
-	}
+            JsonValue assets = object.get("assets");
+            if (assets == null || !assets.isArray()) {
+                throw new GithubException("Assets array cannot be found");
+            }
+            for (JsonValue assetValue : assets.asArray()) {
+                if (!assetValue.isObject()) {
+                    throw new GithubException();
+                }
 
-	private static String getAssetUrl(String property, JsonObject asset) throws GithubException {
-		return getStringProperty(property, asset, "Asset Download URL property");
-	}
-	
-	private static String getStringProperty(String property, JsonObject obj, String displayName) throws GithubException {
-		JsonValue value = obj.get(property);
-		if (value == null || !value.isString()) {
-			throw new GithubException(displayName + " (" + property + ") cannot be found");
-		}
-		return value.asString();
-	}
+                JsonObject asset = assetValue.asObject();
+                String name = getStringProperty("name", asset, "Asset name");
 
-	private static void downloadUpdate(String downloadURL, String assetURL, String path) throws IOException {
-		URL url = new URL(downloadURL);
-		URLConnection conn = url.openConnection();
+                if (!name.equalsIgnoreCase(JAR_NAME)) {
+                    continue;
+                }
 
-		addAuthorizationHeader(conn);
-		conn.addRequestProperty("Accept", "application/octet-stream");
-		// 30 second read timeout
-		conn.setReadTimeout(30 * 1000);
-		InputStream in;
-		if (useGUI) {
-			in = new ConnMonitorInputStream(conn, "Updating brassworks-updater...", null);
-		} else {
-			in = conn.getInputStream();
-		}
-		Files.copy(in, Paths.get(path), StandardCopyOption.REPLACE_EXISTING);
-		in.close();
-	}
+                rel.downloadURL = getAssetUrl("browser_download_url", asset);
+                rel.assetURL = getAssetUrl("url", asset);
+                break;
+            }
+            if (rel.tagName == null) {
+                throw new GithubException("Latest release asset cannot be found");
+            }
+        } finally {
+            if (owner != null) {
+                owner.dispose();
+            }
+        }
+        return rel;
+    }
 
-	private static void addAuthorizationHeader(URLConnection conn) {
-		if (accessToken != null) {
-			// Authenticated downloads use the assetURL
-			conn.addRequestProperty("Authorization", accessToken);
-		}
-	}
+    private static String getAssetUrl(String property, JsonObject asset) throws GithubException {
+        return getStringProperty(property, asset, "Asset Download URL property");
+    }
+
+    private static String getStringProperty(String property, JsonObject obj, String displayName) throws GithubException {
+        JsonValue value = obj.get(property);
+        if (value == null || !value.isString()) {
+            throw new GithubException(displayName + " (" + property + ") cannot be found");
+        }
+        return value.asString();
+    }
+
+    private static void downloadUpdate(String downloadURL, String assetURL, String path) throws IOException {
+        URL url = new URL(downloadURL);
+        URLConnection conn = url.openConnection();
+
+        addAuthorizationHeader(conn);
+        conn.addRequestProperty("Accept", "application/octet-stream");
+        // 30 second read timeout
+        conn.setReadTimeout(30 * 1000);
+
+        JFrame owner = null;
+        if (useGUI) {
+            owner = new JFrame();
+            if (!icons.isEmpty()) {
+                owner.setIconImages(icons);
+            }
+            owner.setUndecorated(true);
+            owner.setVisible(true);
+            owner.setLocationRelativeTo(null);
+        }
+
+        try {
+            InputStream in;
+            if (useGUI) {
+                in = new ConnMonitorInputStream(conn, "Updating brassworks-updater...", null, owner);
+            } else {
+                in = conn.getInputStream();
+            }
+            Files.copy(in, Paths.get(path), StandardCopyOption.REPLACE_EXISTING);
+            in.close();
+        } finally {
+            if (owner != null) {
+                owner.dispose();
+            }
+        }
+    }
+
+    private static void addAuthorizationHeader(URLConnection conn) {
+        if (accessToken != null) {
+            // Authenticated downloads use the assetURL
+            conn.addRequestProperty("Authorization", accessToken);
+        }
+    }
 
 }
